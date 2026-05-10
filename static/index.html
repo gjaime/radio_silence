@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>silence · radio auditor</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>">
   <style>
     /* ── Variables ───────────────────────────────────────────────── */
     :root {
@@ -530,7 +531,11 @@ function renderStations() {
   const nowMs       = Date.now();
   const fromMs      = nowMs - state.hours * 3600 * 1000;
   const alignedFrom = Math.floor(fromMs / bucketMs) * bucketMs;
-  const alignedNow  = Math.floor(nowMs  / bucketMs) * bucketMs;
+  // Retroceder un bucket si el actual tiene < 30s — evita la barra gris del extremo derecho
+  const posInBucket = nowMs % bucketMs;
+  const alignedNow  = posInBucket < 30000
+    ? Math.floor(nowMs / bucketMs) * bucketMs - bucketMs
+    : Math.floor(nowMs / bucketMs) * bucketMs;
 
   let html = '';
   let lastGroup = null;
