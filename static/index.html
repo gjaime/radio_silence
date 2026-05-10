@@ -149,8 +149,14 @@
       font-size: 13px;
       font-weight: 600;
       white-space: nowrap;
-      min-width: 42px;
       text-align: right;
+      cursor: default;
+    }
+    .station-uptime .coverage {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      margin-left: 3px;
     }
     .pct-ok   { color: var(--ok); }
     .pct-warn { color: var(--silence); }
@@ -532,12 +538,17 @@ function buildStationRow(st, bucketMs, alignedFrom, alignedNow) {
   const fromStr = shortTimeFmt.format(new Date(alignedFrom));
   const nowStr  = shortTimeFmt.format(new Date(alignedNow));
 
-  // Uptime %
-  let uCls = 'pct-none', uStr = '—';
+  // Uptime % (sobre ventana completa) + cobertura si es parcial
+  let uCls = 'pct-none', uStr = '—', uTitle = '';
   if (st.uptime_pct !== null) {
     uStr = `${st.uptime_pct}%`;
     uCls = st.uptime_pct < 95 ? 'pct-bad' : st.uptime_pct < 99.5 ? 'pct-warn' : 'pct-ok';
+    uTitle = `${st.uptime_pct}% en línea sobre ${state.hours}h · ${st.sampled_hours}h monitoreadas (${st.coverage_pct}% cobertura)`;
   }
+  // Etiqueta de cobertura si falta más del 5% de la ventana
+  const covHtml = (st.coverage_pct !== null && st.coverage_pct < 95)
+    ? `<span class="coverage" title="${uTitle}">${st.sampled_hours}h</span>`
+    : '';
 
   return `
 <div class="station-row">
@@ -545,7 +556,7 @@ function buildStationRow(st, bucketMs, alignedFrom, alignedNow) {
     <div class="station-dot dot-${curSt}"></div>
     <span class="station-name">${st.name}</span>
     <span class="station-location">${st.city}, ${st.state}</span>
-    <span class="station-uptime ${uCls}">${uStr}</span>
+    <span class="station-uptime ${uCls}" title="${uTitle}">${uStr}${covHtml}</span>
   </div>
   <div class="bars" data-sid="${st.station_id}">${barsHtml}</div>
   <div class="bars-axis">

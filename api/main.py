@@ -82,7 +82,11 @@ def _bucket_status(total: int, online: int, audio_ok: int) -> str:
     return "ok"
 
 
-def _build_station_map(station_rows: list, bucket_rows: list) -> dict[str, Any]:
+def _build_station_map(
+    station_rows: list, bucket_rows: list, hours: int
+) -> dict[str, Any]:
+    window_seconds = hours * 3600  # segundos esperados en la ventana completa
+
     smap: dict[str, Any] = {
         r["station_id"]: {
             "station_id":  r["station_id"],
@@ -109,11 +113,17 @@ def _build_station_map(station_rows: list, bucket_rows: list) -> dict[str, Any]:
             "status":   _bucket_status(total, online, audio_ok),
         })
     for st in smap.values():
-        t = sum(b["total"]    for b in st["buckets"])
-        o = sum(b["online"]   for b in st["buckets"])
-        a = sum(b["audio_ok"] for b in st["buckets"])
-        st["uptime_pct"]   = round(o / t * 100, 1) if t else None
-        st["audio_ok_pct"] = round(a / t * 100, 1) if t else None
+        sampled  = sum(b["total"]    for b in st["buckets"])
+        online   = sum(b["online"]   for b in st["buckets"])
+        audio_ok = sum(b["audio_ok"] for b in st["buckets"])
+        # Uptime sobre la ventana COMPLETA: períodos sin datos cuentan como desconocidos
+        # → denominador = max(sampled, window_seconds) para no inflar si hay más datos
+        denom = max(sampled, window_seconds)
+        st["uptime_pct"]    = round(online   / denom * 100, 1) if denom else None
+        st["audio_ok_pct"]  = round(audio_ok / denom * 100, 1) if denom else None
+        # Cobertura: qué fracción de la ventana tenemos datos
+        st["coverage_pct"]  = round(sampled  / window_seconds * 100, 1) if window_seconds else None
+        st["sampled_hours"] = round(sampled / 3600, 1)
     return smap
 
 
@@ -138,7 +148,7 @@ def api_status(hours: int = 24) -> JSONResponse:
         "hours":          hours,
         "bucket_minutes": 5 if hours == 24 else 60,
         "generated_at":   datetime.now(timezone.utc).isoformat(),
-        "stations":       list(_build_station_map(stations, buckets).values()),
+        "stations":       list(_build_station_map(stations, buckets, hours).values()),
     })
 
 
