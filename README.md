@@ -157,6 +157,58 @@ The API binds on HTTP port 8080. Terminate TLS at a reverse proxy (Nginx, Caddy,
 
 ---
 
+## Fault classification
+
+### Incident types
+
+Every second, the monitor evaluates each station and records one of two fault conditions:
+
+| Type | `online` | `audio_ok` | Meaning |
+|---|---|---|---|
+| **Silence** (dead air) | `true` | `false` | The stream server responds but no audio frames are present. The transmitter or encoder has failed while the CDN remains up. The most dangerous fault: external monitoring tools that only check HTTP connectivity will miss it. |
+| **Offline** (stream down) | `false` | `false` | The TCP/HTTP connection to the stream failed, timed out, or returned an error. |
+
+> **Noise floor:** Events shorter than **3 consecutive seconds** are discarded. This filters transient network jitter, encoder restart artifacts, and keep-alive reconnections.
+
+### Severity scale
+
+Incidents are classified by duration using the `classify_alert()` function:
+
+| Level | Duration | Description |
+|---|---|---|
+| 🔵 **Low** | 3 – 5 s | Transient. Usually self-corrects. No immediate action required. |
+| 🟡 **Medium-low** | 6 – 15 s | Brief interruption, noticeable to listeners. Monitor for recurrence. |
+| 🟠 **Medium** | 16 – 30 s | Audible dead air. Warrants investigation. |
+| 🔴 **High** | 31 – 120 s | Significant incident. Listeners are switching stations. Requires investigation. |
+| 🔴 **Critical** | 2 – 5 min | Extended outage. Measurable audience impact. Operational response recommended. |
+| ⛔ **Severe** | 5 – 30 min | Major broadcast interruption. Active incident management required. |
+| ⛔ **Outage** | > 30 min | Station has been off-air or silent for a prolonged period. Emergency response. |
+
+### Uptime metrics
+
+Uptime is computed **only over monitored time** — gaps with no data (monitor stopped, network issue) are treated as *unknown*, not as downtime.
+
+```
+uptime_pct    = online_samples   / sampled_seconds × 100
+audio_ok_pct  = audio_ok_samples / sampled_seconds × 100
+coverage_pct  = sampled_seconds  / window_seconds  × 100
+```
+
+A station with low `coverage_pct` (< 95 %) has incomplete data for the window; its uptime figure should be read as provisional.
+
+### Dashboard bar colors
+
+| Color | Status | Condition |
+|---|---|---|
+| 🟢 Green | Operational | `online=true`, `audio_ok=true` in ≥ 95 % of the bucket's samples |
+| 🟡 Amber | Silence | `online=true` but `audio_ok=false` in ≥ 5 % of samples |
+| 🔴 Red | Offline | `online=false` in ≥ 50 % of samples |
+| ⬜ Gray | No data | No readings in that time bucket |
+
+See [`docs/fault-taxonomy.md`](docs/fault-taxonomy.md) for the complete specification.
+
+---
+
 ## API reference
 
 ### `GET /api/status?hours=24|100`
@@ -173,8 +225,6 @@ Returns per-station uptime buckets for the requested window.
 ### `GET /api/incidents?hours=24|100`
 
 Returns all detected incidents (silence + offline) in the window.
-
-See [`docs/fault-taxonomy.md`](docs/fault-taxonomy.md) for severity definitions.
 
 ---
 
