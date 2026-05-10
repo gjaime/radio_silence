@@ -444,7 +444,7 @@
       /* Header: tabs ocupan todo el ancho */
       header { gap: 10px; }
       .tabs { width: 100%; }
-      .tab  { flex: 1; text-align: center; padding: 7px 6px; font-size: 12px; }
+      .tab  { flex: 1; text-align: center; padding: 7px 4px; font-size: 12px; }
 
       /* Banner */
       .banner { font-size: 13px; padding: 12px 14px; margin-bottom: 20px; }
@@ -567,8 +567,9 @@
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="tabs" id="tabs">
-        <button class="tab active" data-hours="24">Últimas 24 h</button>
-        <button class="tab"        data-hours="100">Últimas 100 h</button>
+        <button class="tab active" data-hours="24">24 h</button>
+        <button class="tab"        data-hours="168">7 días</button>
+        <button class="tab"        data-hours="720">30 días</button>
       </div>
       <button class="help-btn" id="help-open" title="¿Cómo funciona?">?</button>
     </div>
@@ -723,6 +724,13 @@ const LEON_FORMULA_PINNED = ['mx_gto_leon_101100', 'mx_gto_leon_107100'];
 // ── Estado global ─────────────────────────────────────────────────────────────
 
 const state = { hours: 24, groupBy: 'custom', status: null, incidents: null };
+
+function windowLabel(hours) {
+  if (hours === 24)  return 'últimas 24 horas';
+  if (hours === 168) return 'últimos 7 días';
+  if (hours === 720) return 'últimos 30 días';
+  return `últimas ${hours} h`;
+}
 let cdTimer = null;
 let cdValue = 60;
 
@@ -794,16 +802,16 @@ function renderBanner() {
   banner.className = 'banner';
   if (severe) {
     banner.classList.add('banner-error');
-    text.textContent = `${severe} interrupción${severe > 1 ? 'es severas' : ' severa'} en las últimas ${state.hours} h`;
+    text.textContent = `${severe} interrupción${severe > 1 ? 'es severas' : ' severa'} en los ${windowLabel(state.hours)}`;
   } else if (notable) {
     banner.classList.add('banner-warning');
-    text.textContent = `${total} incidente${total > 1 ? 's' : ''} en las últimas ${state.hours} h`;
+    text.textContent = `${total} incidente${total > 1 ? 's' : ''} en los ${windowLabel(state.hours)}`;
   } else if (total) {
     banner.classList.add('banner-warning');
-    text.textContent = `${total} incidente${total > 1 ? 's menores' : ' menor'} en las últimas ${state.hours} h`;
+    text.textContent = `${total} incidente${total > 1 ? 's menores' : ' menor'} en los ${windowLabel(state.hours)}`;
   } else {
     banner.classList.add('banner-ok');
-    text.textContent = `Todos los sistemas operativos · últimas ${state.hours} h`;
+    text.textContent = `Todos los sistemas operativos · ${windowLabel(state.hours)}`;
   }
 }
 
@@ -882,11 +890,12 @@ function buildStationRow(st, bucketMs, alignedFrom, alignedNow) {
     bmap[key] = b;
   }
 
-  // Estado actual: última cubeta ≤ 12 min
+  // Estado actual: última cubeta dentro de 3× el tamaño de cubeta (≤1 h máximo)
   const sorted   = [...st.buckets].sort((a, b) => a.time < b.time ? -1 : 1);
   const lastB    = sorted[sorted.length - 1];
   const ageMs    = lastB ? Date.now() - new Date(lastB.time).getTime() : Infinity;
-  const curSt    = (!lastB || ageMs > 12 * 60 * 1000) ? 'nodata' : lastB.status;
+  const staleMs  = Math.min(bucketMs * 3, 60 * 60 * 1000);
+  const curSt    = (!lastB || ageMs > staleMs) ? 'nodata' : lastB.status;
 
   // Barras
   let barsHtml = '';
@@ -933,7 +942,7 @@ function buildStationRow(st, bucketMs, alignedFrom, alignedNow) {
   </div>
   <div class="bars" data-sid="${st.station_id}">${barsHtml}</div>
   <div class="bars-axis">
-    <span>${state.hours} h atrás · ${fromStr} CDMX</span>
+    <span>${state.hours >= 168 ? (state.hours / 24 | 0) + ' días atrás' : state.hours + ' h atrás'} · ${fromStr} CDMX</span>
     <span>Ahora · ${nowStr} CDMX</span>
   </div>
 </div>`;
@@ -974,7 +983,7 @@ function renderIncidents() {
 
   if (!list.length) {
     container.innerHTML =
-      `<div class="no-incidents">Sin incidentes en las últimas ${state.hours} horas.</div>`;
+      `<div class="no-incidents">Sin incidentes en los ${windowLabel(state.hours)}.</div>`;
     return;
   }
 

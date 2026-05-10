@@ -49,10 +49,13 @@ ORDER  BY station_id;
 
 STATUS_SQL = {
     24:  ("SELECT station_id, name, network, city, state, bucket, total, online_cnt, audio_ok_cnt"
-          " FROM mv_status_5min WHERE bucket > NOW() - INTERVAL '24 hours'"
+          " FROM mv_status_5min  WHERE bucket > NOW() - INTERVAL '24 hours'"
           " ORDER BY station_id, bucket;"),
-    100: ("SELECT station_id, name, network, city, state, bucket, total, online_cnt, audio_ok_cnt"
-          " FROM mv_status_1h  WHERE bucket > NOW() - INTERVAL '100 hours'"
+    168: ("SELECT station_id, name, network, city, state, bucket, total, online_cnt, audio_ok_cnt"
+          " FROM mv_status_30min WHERE bucket > NOW() - INTERVAL '7 days'"
+          " ORDER BY station_id, bucket;"),
+    720: ("SELECT station_id, name, network, city, state, bucket, total, online_cnt, audio_ok_cnt"
+          " FROM mv_status_6h    WHERE bucket > NOW() - INTERVAL '30 days'"
           " ORDER BY station_id, bucket;"),
 }
 
@@ -62,10 +65,15 @@ INCIDENTS_SQL = {
           " duration_seconds, type, alert_level"
           " FROM mv_incidents_live WHERE started_at_utc > NOW() - INTERVAL '24 hours'"
           " ORDER BY started_at_utc DESC;"),
-    100: ("SELECT station_id, station_name, city, network,"
+    168: ("SELECT station_id, station_name, city, network,"
           " started_at_utc, started_at_cdmx, ended_at_utc, ended_at_cdmx,"
           " duration_seconds, type, alert_level"
-          " FROM mv_incidents_live WHERE started_at_utc > NOW() - INTERVAL '100 hours'"
+          " FROM mv_incidents_live WHERE started_at_utc > NOW() - INTERVAL '7 days'"
+          " ORDER BY started_at_utc DESC;"),
+    720: ("SELECT station_id, station_name, city, network,"
+          " started_at_utc, started_at_cdmx, ended_at_utc, ended_at_cdmx,"
+          " duration_seconds, type, alert_level"
+          " FROM mv_incidents_live WHERE started_at_utc > NOW() - INTERVAL '30 days'"
           " ORDER BY started_at_utc DESC;"),
 }
 
@@ -130,8 +138,8 @@ def _build_station_map(
 
 @app.get("/api/status")
 def api_status(hours: int = 24) -> JSONResponse:
-    if hours not in (24, 100):
-        raise HTTPException(400, "hours must be 24 or 100")
+    if hours not in (24, 168, 720):
+        raise HTTPException(400, "hours must be 24, 168 or 720")
 
     conn = get_conn()
     try:
@@ -145,7 +153,7 @@ def api_status(hours: int = 24) -> JSONResponse:
 
     return JSONResponse({
         "hours":          hours,
-        "bucket_minutes": 5 if hours == 24 else 60,
+        "bucket_minutes": 5 if hours == 24 else (30 if hours == 168 else 360),
         "generated_at":   datetime.now(timezone.utc).isoformat(),
         "stations":       list(_build_station_map(stations, buckets, hours).values()),
     })
@@ -153,8 +161,8 @@ def api_status(hours: int = 24) -> JSONResponse:
 
 @app.get("/api/incidents")
 def api_incidents(hours: int = 24) -> JSONResponse:
-    if hours not in (24, 100):
-        raise HTTPException(400, "hours must be 24 or 100")
+    if hours not in (24, 168, 720):
+        raise HTTPException(400, "hours must be 24, 168 or 720")
 
     conn = get_conn()
     try:
