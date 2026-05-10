@@ -276,6 +276,116 @@
     .badge-severe     { background:#ef4444; color:#fff; }
     .badge-outage     { background:#7f1d1d; color:#fff; }
 
+    /* ── Help button + modal ─────────────────────────────────────── */
+    .help-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all .15s;
+      line-height: 1;
+      user-select: none;
+    }
+    .help-btn:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 10000;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px;
+      overflow-y: auto;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg);
+      border-radius: 10px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      width: 100%;
+      max-width: 580px;
+      padding: 28px 28px 24px;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 14px; right: 16px;
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: var(--muted);
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal h2 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .modal .modal-lead {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .modal h3 {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 20px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal h3:first-of-type { margin-top: 0; }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 12px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-swatch {
+      width: 18px; height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .severity-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 7px 12px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .modal p { font-size: 13px; line-height: 1.65; margin-bottom: 10px; }
+    .modal p:last-child { margin-bottom: 0; }
+    .modal .note {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      line-height: 1.6;
+    }
+
     /* ── Footer ──────────────────────────────────────────────────── */
     footer {
       margin-top: 44px;
@@ -334,6 +444,81 @@
 </head>
 <body>
 
+<!-- Modal de ayuda -->
+<div class="modal-overlay" id="help-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button class="modal-close" id="help-close" aria-label="Cerrar">&#x2715;</button>
+    <h2 id="modal-title">¿Cómo funciona esta página?</h2>
+    <p class="modal-lead">
+      <strong>silence</strong> monitorea las señales de emisoras de radio en internet y publica
+      en tiempo real su estado de conexión y audio. Cada segundo se verifica si el stream
+      responde y si transmite audio activo.
+    </p>
+
+    <h3>Estado de cada barra</h3>
+    <div class="legend-grid">
+      <div class="legend-swatch" style="background:#16a34a"></div>
+      <div><strong>Operativo</strong> — conexión activa y audio presente.</div>
+      <div class="legend-swatch" style="background:#d97706"></div>
+      <div><strong>Silencio (dead air)</strong> — el stream responde pero no transmite audio. El transmisor o el codificador falló mientras el servidor sigue en pie.</div>
+      <div class="legend-swatch" style="background:#dc2626"></div>
+      <div><strong>Caída de stream</strong> — la conexión al servidor falló por completo.</div>
+      <div class="legend-swatch" style="background:#d1d5db"></div>
+      <div><strong>Sin datos</strong> — no hay lecturas en ese período (monitor detenido o inicio reciente de monitoreo).</div>
+    </div>
+
+    <h3>Métricas de uptime</h3>
+    <p>
+      El uptime se calcula <strong>solo sobre el tiempo monitoreado</strong>, no sobre toda la ventana.
+      Los períodos sin datos se tratan como desconocidos, no como caídas.
+    </p>
+    <div class="legend-grid">
+      <div class="legend-dot" style="background:#16a34a"></div>
+      <div><strong>En línea</strong> — % de segundos monitoreados en que la conexión respondió.</div>
+      <div class="legend-dot" style="background:#16a34a; opacity:.5"></div>
+      <div><strong>Al aire</strong> — % de segundos monitoreados con audio confirmado.</div>
+    </div>
+    <p style="margin-top:10px; font-size:12px; color:var(--muted);">
+      Si la cobertura de la ventana es &lt; 95 %, los porcentajes son parciales y se indican con las horas reales monitoreadas al colocar el cursor sobre ellos.
+    </p>
+
+    <h3>Tipos de incidente</h3>
+    <div class="legend-grid">
+      <span class="type-silence" style="font-weight:600; font-size:13px; color:#d97706;">Silencio</span>
+      <div>Stream en línea pero sin audio. Mínimo 3 segundos consecutivos.</div>
+      <span class="type-offline" style="font-weight:600; font-size:13px; color:#dc2626;">Caída</span>
+      <div>Conexión al stream fallida. Mínimo 3 segundos consecutivos.</div>
+    </div>
+    <p style="margin-top:10px; font-size:12px; color:var(--muted);">
+      Eventos menores a 3 segundos se descartan como ruido (jitter de red, reinicio del codificador).
+    </p>
+
+    <h3>Niveles de severidad</h3>
+    <div class="severity-grid">
+      <span class="badge badge-low">Bajo</span>
+      <span>3 – 5 s · Transitorio, generalmente se autocorrige.</span>
+      <span class="badge badge-medium_low">Med-bajo</span>
+      <span>6 – 15 s · Interrupción breve perceptible.</span>
+      <span class="badge badge-medium">Medio</span>
+      <span>16 – 30 s · Dead air audible; requiere atención.</span>
+      <span class="badge badge-high">Alto</span>
+      <span>31 – 120 s · Impacto en audiencia. Se debe investigar.</span>
+      <span class="badge badge-critical">Crítico</span>
+      <span>2 – 5 min · Incidente extendido; respuesta operativa recomendada.</span>
+      <span class="badge badge-severe">Severo</span>
+      <span>5 – 30 min · Interrupción mayor; gestión de incidente activa.</span>
+      <span class="badge badge-outage">Corte</span>
+      <span>&gt; 30 min · La emisora lleva fuera del aire un período prolongado.</span>
+    </div>
+
+    <p class="note">
+      Los datos tienen hasta 1 minuto de retraso (las vistas se actualizan cada minuto).
+      El monitor verifica cada emisora cada segundo desde un único punto de red —
+      una caída masiva y simultánea puede indicar un problema del ISP del monitor, no de las emisoras.
+    </p>
+  </div>
+</div>
+
 <!-- Tooltip flotante -->
 <div id="tooltip">
   <div class="tt-time"   id="tt-time"></div>
@@ -351,9 +536,12 @@
         <a href="https://silence.kraken-lab.work">silence.kraken-lab.work</a>
       </div>
     </div>
-    <div class="tabs" id="tabs">
-      <button class="tab active" data-hours="24">Últimas 24 h</button>
-      <button class="tab"        data-hours="100">Últimas 100 h</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-hours="24">Últimas 24 h</button>
+        <button class="tab"        data-hours="100">Últimas 100 h</button>
+      </div>
+      <button class="help-btn" id="help-open" title="¿Cómo funciona?">?</button>
     </div>
   </header>
 
@@ -726,6 +914,23 @@ function resetCountdown() {
     if (cdValue <= 0) { loadData(); cdValue = 60; }
   }, 1000);
 }
+
+// ── Modal de ayuda ────────────────────────────────────────────────────────────
+
+(function () {
+  const overlay = document.getElementById('help-overlay');
+  const open    = document.getElementById('help-open');
+  const close   = document.getElementById('help-close');
+
+  open.addEventListener('click', () => overlay.classList.add('open'));
+  close.addEventListener('click', () => overlay.classList.remove('open'));
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') overlay.classList.remove('open');
+  });
+})();
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 

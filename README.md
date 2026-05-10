@@ -20,7 +20,15 @@ Radio stations stream their signal over the internet as a backup or primary dist
 
 ## Live demo
 
-`https://silence.example.com` *(replace with your deployed URL)*
+**[silence.kraken-lab.work](https://silence.kraken-lab.work)**
+
+### Dashboard — vista de emisoras (últimas 24 h)
+
+![Dashboard — vista de emisoras](docs/img/screenshot-dashboard.png)
+
+### Tabla de incidentes
+
+![Tabla de incidentes](docs/img/screenshot-incidents.png)
 
 ---
 
