@@ -104,6 +104,35 @@
     .banner-warning .banner-dot { background: #d97706; }
     .banner-error   .banner-dot { background: #dc2626; }
 
+    /* ── Group-by control ───────────────────────────────────────── */
+    .group-tabs {
+      display: flex;
+      gap: 3px;
+      margin-bottom: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 3px;
+      width: fit-content;
+    }
+    .group-tab {
+      padding: 4px 14px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all .15s;
+    }
+    .group-tab.active {
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+    .group-tab:hover:not(.active) { color: var(--text); }
+
     /* ── Group header ────────────────────────────────────────────── */
     .group-header {
       font-size: 11px;
@@ -545,6 +574,13 @@
     </div>
   </header>
 
+  <!-- Agrupación -->
+  <div class="group-tabs" id="group-tabs">
+    <button class="group-tab active" data-group="custom">Personalizado</button>
+    <button class="group-tab"        data-group="network">Por cadena</button>
+    <button class="group-tab"        data-group="state">Por estado</button>
+  </div>
+
   <!-- Banner de estado global -->
   <div class="banner banner-ok" id="banner">
     <div class="banner-dot"></div>
@@ -581,28 +617,87 @@ const TZ = 'America/Mexico_City';
 
 // Orden deseado de emisoras en pantalla
 const STATION_ORDER = [
-  'mx_gto_leon_101100',    // Radio Fórmula (grupo)
-  'mx_gto_leon_107100',
-  'mx_qro_queretaro_88700',
+  // ── Radio Fórmula ─────────────────────────────────────────────
+  'mx_cdmx_cdmx_103300',
+  'mx_cdmx_cdmx_970',
+  'mx_cdmx_cdmx_104100',
+  'mx_cdmx_cdmx_1500',
   'mx_nl_monterrey_770',
   'mx_nl_monterrey_1230',
   'mx_nl_monterrey_89300',
+  'mx_gto_leon_101100',
+  'mx_gto_leon_107100',
+  'mx_qro_queretaro_88700',
   'mx_jal_guadalajara_790',
   'mx_jal_guadalajara_1230',
   'mx_jal_guadalajara_89500',
-  'mx_cdmx_cdmx_103300',
   'mx_bc_tijuana_950',
   'mx_sin_culiacan_88700',
-  'mx_mich_morelia_105100',
-  'mx_pue_puebla_1120',
+  'mx_sin_mazatlan_91300',
+  'mx_bcs_lapaz_97500',
+  'mx_chih_chihuahua_101700',
+  'mx_chih_juarez_1460',
+  'mx_dgo_durango_105300',
+  'mx_coah_torreon_105900',
+  'mx_tamps_nuevolaredo_96100',
+  'mx_tamps_tampico_103900',
   'mx_ver_veracruz_89100',
-  'mx_gto_leon_93100',     // Comparativas León (grupo)
+  'mx_ver_veracruz_106100',
+  'mx_ver_coatzacoalcos_98500',
+  'mx_ver_pozarica_100100',
+  'mx_pue_puebla_1120',
+  'mx_mor_cuernavaca_106900',
+  'mx_gro_acapulco_105500',
+  'mx_mich_morelia_105100',
+  'mx_qroo_cancun_92300',
+  'mx_tab_villahermosa_94100',
+  // ── Grupo Radio Centro ────────────────────────────────────────
+  'mx_cdmx_cdmx_91300',
+  'mx_cdmx_cdmx_93700',
+  'mx_cdmx_cdmx_88100',
+  'mx_cdmx_cdmx_107300',
+  // ── Radiópolis ────────────────────────────────────────────────
+  'mx_cdmx_cdmx_101700',
+  'mx_cdmx_cdmx_92900',
+  'mx_cdmx_cdmx_96900',
+  // ── MVS Radio ─────────────────────────────────────────────────
+  'mx_cdmx_cdmx_104900',
+  'mx_cdmx_cdmx_102500',
+  // ── Grupo ACIR ────────────────────────────────────────────────
+  'mx_cdmx_cdmx_95300',
+  'mx_cdmx_cdmx_106500',
+  // ── Grupo Imagen ─────────────────────────────────────────────
+  'mx_ver_veracruz_92500',
+  // ── León ──────────────────────────────────────────────────────
+  'mx_gto_leon_90300',
+  'mx_gto_leon_93100',
+  'mx_gto_leon_93900',
+  'mx_gto_leon_97500',
+  'mx_gto_leon_99900',
+  'mx_gto_leon_101500',
+  'mx_gto_leon_103100',
+  'mx_gto_leon_104100',
+  'mx_gto_leon_105100',
+  'mx_gto_leon_105700',
+  // ── Querétaro ────────────────────────────────────────────────
+  'mx_qro_queretaro_92700',
+  'mx_qro_queretaro_94700',
+  'mx_qro_queretaro_95500',
+  'mx_qro_queretaro_97900',
+  'mx_qro_queretaro_100300',
+  'mx_qro_queretaro_106500',
 ];
 
 // Primer elemento de cada grupo → inserta encabezado antes
 const GROUP_START = {
-  'mx_gto_leon_101100': 'Radio Fórmula',
-  'mx_gto_leon_93100':  'Comparativas León',
+  'mx_cdmx_cdmx_103300': 'Radio Fórmula',
+  'mx_cdmx_cdmx_91300':  'Grupo Radio Centro',
+  'mx_cdmx_cdmx_101700': 'Radiópolis',
+  'mx_cdmx_cdmx_104900': 'MVS Radio',
+  'mx_cdmx_cdmx_95300':  'Grupo ACIR',
+  'mx_ver_veracruz_92500': 'Grupo Imagen',
+  'mx_gto_leon_90300':   'León',
+  'mx_qro_queretaro_92700': 'Querétaro',
 };
 
 const SEVERITY_LABEL = {
@@ -622,9 +717,12 @@ const STATUS_LABEL = {
   nodata:  'Sin datos',
 };
 
+// León Fórmula — siempre primeras en agrupaciones dinámicas
+const LEON_FORMULA_PINNED = ['mx_gto_leon_101100', 'mx_gto_leon_107100'];
+
 // ── Estado global ─────────────────────────────────────────────────────────────
 
-const state = { hours: 24, status: null, incidents: null };
+const state = { hours: 24, groupBy: 'custom', status: null, incidents: null };
 let cdTimer = null;
 let cdValue = 60;
 
@@ -730,14 +828,46 @@ function renderStations() {
   let html = '';
   let lastGroup = null;
 
-  for (const sid of STATION_ORDER) {
-    if (GROUP_START[sid] && GROUP_START[sid] !== lastGroup) {
-      lastGroup = GROUP_START[sid];
-      html += `<div class="group-header">${lastGroup}</div>`;
+  if (state.groupBy === 'custom') {
+    // Orden personalizado: usa STATION_ORDER y GROUP_START
+    for (const sid of STATION_ORDER) {
+      if (GROUP_START[sid] && GROUP_START[sid] !== lastGroup) {
+        lastGroup = GROUP_START[sid];
+        html += `<div class="group-header">${lastGroup}</div>`;
+      }
+      const st = stMap[sid];
+      if (!st) continue;
+      html += buildStationRow(st, bucketMs, alignedFrom, alignedNow);
     }
-    const st = stMap[sid];
-    if (!st) continue;
-    html += buildStationRow(st, bucketMs, alignedFrom, alignedNow);
+  } else {
+    // Agrupación dinámica: León Fórmula primero, luego el resto ordenado
+    const groupKey = state.groupBy === 'state' ? 'state' : 'network';
+    const pinned   = LEON_FORMULA_PINNED.map(sid => stMap[sid]).filter(Boolean);
+    const rest     = Object.values(stMap)
+      .filter(st => !LEON_FORMULA_PINNED.includes(st.station_id))
+      .sort((a, b) => {
+        const ga = a[groupKey] || '';
+        const gb = b[groupKey] || '';
+        if (ga !== gb) return ga.localeCompare(gb, 'es');
+        return (a.name || '').localeCompare(b.name || '', 'es');
+      });
+
+    // Bloque León Fórmula al inicio
+    if (pinned.length) {
+      lastGroup = 'Radio Fórmula León';
+      html += `<div class="group-header">Radio Fórmula León</div>`;
+      for (const st of pinned) html += buildStationRow(st, bucketMs, alignedFrom, alignedNow);
+    }
+
+    // Resto agrupado dinámicamente
+    for (const st of rest) {
+      const groupVal = st[groupKey] || '—';
+      if (groupVal !== lastGroup) {
+        lastGroup = groupVal;
+        html += `<div class="group-header">${groupVal}</div>`;
+      }
+      html += buildStationRow(st, bucketMs, alignedFrom, alignedNow);
+    }
   }
 
   document.getElementById('stations-container').innerHTML = html;
@@ -902,6 +1032,17 @@ document.getElementById('tabs').addEventListener('click', e => {
     '<div class="loading">Cargando incidentes…</div>';
   loadData();
   resetCountdown();
+});
+
+document.getElementById('group-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.group-tab');
+  if (!btn) return;
+  const g = btn.dataset.group;
+  if (g === state.groupBy) return;
+  state.groupBy = g;
+  document.querySelectorAll('.group-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderStations();
 });
 
 // ── Auto-refresh ──────────────────────────────────────────────────────────────
