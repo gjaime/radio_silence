@@ -146,17 +146,21 @@
       color: var(--muted);
     }
     .station-uptime {
-      font-size: 13px;
-      font-weight: 600;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
       white-space: nowrap;
-      text-align: right;
       cursor: default;
     }
-    .station-uptime .coverage {
+    .pct-row { display: flex; align-items: baseline; gap: 4px; }
+    .pct-val {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .pct-label {
       font-size: 11px;
-      font-weight: 400;
       color: var(--muted);
-      margin-left: 3px;
     }
     .pct-ok   { color: var(--ok); }
     .pct-warn { color: var(--silence); }
@@ -538,17 +542,22 @@ function buildStationRow(st, bucketMs, alignedFrom, alignedNow) {
   const fromStr = shortTimeFmt.format(new Date(alignedFrom));
   const nowStr  = shortTimeFmt.format(new Date(alignedNow));
 
-  // Uptime % (sobre ventana completa) + cobertura si es parcial
-  let uCls = 'pct-none', uStr = '—', uTitle = '';
-  if (st.uptime_pct !== null) {
-    uStr = `${st.uptime_pct}%`;
-    uCls = st.uptime_pct < 95 ? 'pct-bad' : st.uptime_pct < 99.5 ? 'pct-warn' : 'pct-ok';
-    uTitle = `${st.uptime_pct}% en línea sobre ${state.hours}h · ${st.sampled_hours}h monitoreadas (${st.coverage_pct}% cobertura)`;
-  }
-  // Etiqueta de cobertura si falta más del 5% de la ventana
-  const covHtml = (st.coverage_pct !== null && st.coverage_pct < 95)
-    ? `<span class="coverage" title="${uTitle}">${st.sampled_hours}h</span>`
-    : '';
+  // En línea %
+  const onlinePct = st.uptime_pct;
+  const onlineCls = onlinePct === null ? 'pct-none'
+    : onlinePct < 95   ? 'pct-bad'
+    : onlinePct < 99.5 ? 'pct-warn' : 'pct-ok';
+  const onlineStr = onlinePct !== null ? `${onlinePct}%` : '—';
+
+  // Al aire % (audio OK)
+  const airePct = st.audio_ok_pct;
+  const aireCls = airePct === null ? 'pct-none'
+    : airePct < 95   ? 'pct-bad'
+    : airePct < 99.5 ? 'pct-warn' : 'pct-ok';
+  const aireStr = airePct !== null ? `${airePct}%` : '—';
+
+  // Título de cobertura (tooltip)
+  const uTitle = `${st.sampled_hours}h monitoreadas · ${st.coverage_pct}% cobertura de la ventana`;
 
   return `
 <div class="station-row">
@@ -556,7 +565,10 @@ function buildStationRow(st, bucketMs, alignedFrom, alignedNow) {
     <div class="station-dot dot-${curSt}"></div>
     <span class="station-name">${st.name}</span>
     <span class="station-location">${st.city}, ${st.state}</span>
-    <span class="station-uptime ${uCls}" title="${uTitle}">${uStr}${covHtml}</span>
+    <span class="station-uptime" title="${uTitle}">
+      <span class="pct-row"><span class="pct-val ${onlineCls}">${onlineStr}</span><span class="pct-label">en línea</span></span>
+      <span class="pct-row"><span class="pct-val ${aireCls}">${aireStr}</span><span class="pct-label">al aire</span></span>
+    </span>
   </div>
   <div class="bars" data-sid="${st.station_id}">${barsHtml}</div>
   <div class="bars-axis">
