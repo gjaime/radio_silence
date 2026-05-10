@@ -199,3 +199,38 @@ Se hizo un cruce entre el top-40 de emisoras.com.mx y la BD actual. Se encontrar
 - [ ] Investigar Exa Tuxtla, Exa Acuña, Exa Carmen, Lupe Parral, Digimix/Radium La Paz.
 - [ ] Revisar Fórmula Cancún: buscar stream alternativo en página oficial radioformula.com.mx/cancun.
 - [ ] Tomar screenshots del dashboard para `docs/img/`.
+
+---
+
+## 2026-05-10 — Sesión 4: vistas de 7 días y 30 días
+
+### Cambios técnicos
+
+#### Nuevas vistas materializadas (CT240)
+- `mv_status_30min` — cubetas de 30 min, ventana 7 días (168 h). 328 filas iniciales. Unique index `mv_status_30min_pk`. Owner: `radio`. CONCURRENTLY.
+- `mv_status_6h` — cubetas de 6 horas, ventana 30 días (720 h). 124 filas iniciales. Unique index `mv_status_6h_pk`. Owner: `radio`. CONCURRENTLY.
+- `mv_incidents_live` recreada con ventana ampliada de 101 h → 721 h (30 días + 1h).
+- `refresh_views.py` actualizado: 5 vistas ahora, ciclo ~7 s total.
+
+#### API (`api/main.py`)
+- `STATUS_SQL` y `INCIDENTS_SQL`: se eliminó `hours=100`, se agregaron `hours=168` y `hours=720`.
+- Validación actualizada: `hours not in (24, 168, 720)`.
+- `bucket_minutes`: `5 if hours==24 else (30 if hours==168 else 360)`.
+
+#### Dashboard (`static/index.html`)
+- Tabs: **24 h** · **7 días** · **30 días** (reemplazó "Últimas 100 h").
+- Función `windowLabel(hours)` para etiquetas legibles en banner, incidentes y eje.
+- Eje temporal: "7 días atrás" / "30 días atrás" según tab activo.
+- Dot de estado actual: umbral adaptativo `min(3 × bucketMs, 1h)` en lugar de 12 min fijo.
+- Padding de tabs reducido en mobile para acomodar tercer tab.
+
+### Estado al cierre
+- Commit `db3cdba` en `main`, pusheado a GitHub.
+- API y dashboard en producción (`silence.kraken-lab.work`) con las tres ventanas temporales.
+- Las vistas de 7 y 30 días se irán llenando progresivamente con el histórico acumulado.
+
+### Pendientes para próxima sesión
+- [ ] Insertar las 26 estaciones verificadas (ver sesión anterior).
+- [ ] Investigar los 13 streams pendientes (D95, La Lupe, Latina TJ, Máxima GDL, etc.).
+- [ ] Revisar Fórmula Cancún: buscar stream alternativo.
+- [ ] Screenshots del dashboard → `docs/img/`.
