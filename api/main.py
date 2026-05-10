@@ -116,11 +116,10 @@ def _build_station_map(
         sampled  = sum(b["total"]    for b in st["buckets"])
         online   = sum(b["online"]   for b in st["buckets"])
         audio_ok = sum(b["audio_ok"] for b in st["buckets"])
-        # Uptime sobre la ventana COMPLETA: períodos sin datos cuentan como desconocidos
-        # → denominador = max(sampled, window_seconds) para no inflar si hay más datos
-        denom = max(sampled, window_seconds)
-        st["uptime_pct"]    = round(online   / denom * 100, 1) if denom else None
-        st["audio_ok_pct"]  = round(audio_ok / denom * 100, 1) if denom else None
+        # Uptime sobre tiempo MONITOREADO (solo lo que observamos)
+        # Períodos sin datos = desconocidos, no se penalizan
+        st["uptime_pct"]    = round(online   / sampled * 100, 1) if sampled else None
+        st["audio_ok_pct"]  = round(audio_ok / sampled * 100, 1) if sampled else None
         # Cobertura: qué fracción de la ventana tenemos datos
         st["coverage_pct"]  = round(sampled  / window_seconds * 100, 1) if window_seconds else None
         st["sampled_hours"] = round(sampled / 3600, 1)
