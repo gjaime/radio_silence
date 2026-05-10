@@ -1,0 +1,26 @@
+[Unit]
+Description=Silence — Radio Auditor Status API
+Documentation=https://github.com/gjaime/radio_silence
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+WorkingDirectory=/opt/radio_silence
+
+EnvironmentFile=/etc/radio_auditor/db.env
+ExecStart=/opt/radio_auditor/venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8080
+
+Restart=always
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=silence-api
+
+[Install]
+WantedBy=multi-user.target

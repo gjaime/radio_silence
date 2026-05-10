@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>silence · radio auditor</title>
+  <style>
+    /* ── Variables ───────────────────────────────────────────────── */
+    :root {
+      --ok:       #16a34a;
+      --silence:  #d97706;
+      --offline:  #dc2626;
+      --nodata:   #d1d5db;
+      --bg:       #ffffff;
+      --surface:  #f9fafb;
+      --border:   #e5e7eb;
+      --text:     #111827;
+      --muted:    #6b7280;
+      --accent:   #1d4ed8;
+      --radius:   6px;
+    }
+
+    /* ── Reset ───────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .container { max-width: 960px; margin: 0 auto; padding: 28px 20px 56px; }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .header-brand h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .header-brand .sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .tabs {
+      display: flex;
+      gap: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 3px;
+    }
+    .tab {
+      padding: 6px 16px;
+      border-radius: 4px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all .15s;
+    }
+    .tab.active {
+      background: var(--bg);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    /* ── Banner ──────────────────────────────────────────────────── */
+    .banner {
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 32px;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .banner-ok      { background: #dcfce7; color: #14532d; }
+    .banner-warning { background: #fef9c3; color: #713f12; }
+    .banner-error   { background: #fee2e2; color: #7f1d1d; }
+    .banner-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .banner-ok      .banner-dot { background: #16a34a; }
+    .banner-warning .banner-dot { background: #d97706; }
+    .banner-error   .banner-dot { background: #dc2626; }
+
+    /* ── Group header ────────────────────────────────────────────── */
+    .group-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 32px 0 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Station row ─────────────────────────────────────────────── */
+    .station-row {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .station-top {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .station-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .dot-ok      { background: var(--ok); }
+    .dot-silence { background: var(--silence); }
+    .dot-offline { background: var(--offline); }
+    .dot-nodata  { background: var(--nodata); }
+    .station-name {
+      font-weight: 600;
+      font-size: 14px;
+      flex: 1;
+    }
+    .station-location {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .station-uptime {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      min-width: 42px;
+      text-align: right;
+    }
+    .pct-ok   { color: var(--ok); }
+    .pct-warn { color: var(--silence); }
+    .pct-bad  { color: var(--offline); }
+    .pct-none { color: var(--muted); }
+
+    /* ── Bars ────────────────────────────────────────────────────── */
+    .bars {
+      display: flex;
+      gap: 1px;
+      height: 32px;
+      border-radius: 3px;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+    .bar {
+      flex: 1;
+      min-width: 2px;
+      height: 100%;
+      transition: opacity .1s;
+    }
+    .bar:hover { opacity: .7; }
+    .bar-ok      { background: var(--ok); }
+    .bar-silence { background: var(--silence); }
+    .bar-offline { background: var(--offline); }
+    .bar-nodata  { background: var(--nodata); }
+    .bars-axis {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Tooltip ─────────────────────────────────────────────────── */
+    #tooltip {
+      position: fixed;
+      background: #1f2937;
+      color: #f9fafb;
+      font-size: 12px;
+      line-height: 1.65;
+      padding: 8px 11px;
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 9999;
+      max-width: 230px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.3);
+      display: none;
+    }
+    .tt-time   { font-size: 11px; opacity: .7; margin-bottom: 1px; }
+    .tt-status { font-weight: 600; }
+    .tt-stats  { opacity: .85; font-size: 11px; margin-top: 2px; }
+
+    /* ── Incidents section ───────────────────────────────────────── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 44px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .no-incidents {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 14px 0;
+    }
+    .incidents-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .incidents-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 12px 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .incidents-table td {
+      padding: 10px 12px 10px 0;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .incidents-table tr:last-child td { border-bottom: none; }
+    .col-time  { width: 120px; white-space: nowrap; }
+    .col-dur   { width: 88px;  white-space: nowrap; }
+    .col-type  { width: 80px; }
+    .col-badge { width: 160px; }
+
+    .type-silence { color: var(--silence); font-weight: 600; }
+    .type-offline { color: var(--offline); font-weight: 600; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-low        { background:#fef9c3; color:#713f12; }
+    .badge-medium_low { background:#fef3c7; color:#92400e; }
+    .badge-medium     { background:#fed7aa; color:#9a3412; }
+    .badge-high       { background:#fecaca; color:#991b1b; }
+    .badge-critical   { background:#fca5a5; color:#7f1d1d; }
+    .badge-severe     { background:#ef4444; color:#fff; }
+    .badge-outage     { background:#7f1d1d; color:#fff; }
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    footer {
+      margin-top: 44px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    footer .sep { opacity: .4; }
+    #last-updated { font-weight: 500; color: var(--text); }
+    #countdown { font-variant-numeric: tabular-nums; }
+
+    /* ── Loading ─────────────────────────────────────────────────── */
+    .loading { color: var(--muted); padding: 32px 0; text-align: center; font-size: 13px; }
+  </style>
+</head>
+<body>
+
+<!-- Tooltip flotante -->
+<div id="tooltip">
+  <div class="tt-time"   id="tt-time"></div>
+  <div class="tt-status" id="tt-status"></div>
+  <div class="tt-stats"  id="tt-stats"></div>
+</div>
+
+<div class="container">
+
+  <header>
+    <div class="header-brand">
+      <h1>silence</h1>
+      <div class="sub">
+        radio auditor &nbsp;·&nbsp;
+        <a href="https://silence.kraken-lab.work">silence.kraken-lab.work</a>
+      </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-hours="24">Últimas 24 h</button>
+      <button class="tab"        data-hours="100">Últimas 100 h</button>
+    </div>
+  </header>
+
+  <!-- Banner de estado global -->
+  <div class="banner banner-ok" id="banner">
+    <div class="banner-dot"></div>
+    <span id="banner-text">Cargando…</span>
+  </div>
+
+  <!-- Filas de emisoras (generadas por JS) -->
+  <div id="stations-container">
+    <div class="loading">Cargando datos…</div>
+  </div>
+
+  <!-- Tabla de incidentes -->
+  <div class="section-title">Incidentes</div>
+  <div id="incidents-container">
+    <div class="loading">Cargando incidentes…</div>
+  </div>
+
+  <footer>
+    <span>Actualizado: <span id="last-updated">—</span> CDMX</span>
+    <span class="sep">·</span>
+    <span>Los datos pueden tener hasta 1 minuto de retraso.</span>
+    <span class="sep">·</span>
+    <span>Actualizando en <span id="countdown">60</span>s</span>
+  </footer>
+
+</div><!-- /container -->
+
+<script>
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const TZ = 'America/Mexico_City';
+
+// Orden deseado de emisoras en pantalla
+const STATION_ORDER = [
+  'mx_gto_leon_101100',    // Radio Fórmula (grupo)
+  'mx_gto_leon_107100',
+  'mx_qro_queretaro_88700',
+  'mx_nl_monterrey_770',
+  'mx_nl_monterrey_1230',
+  'mx_nl_monterrey_89300',
+  'mx_jal_guadalajara_790',
+  'mx_jal_guadalajara_1230',
+  'mx_jal_guadalajara_89500',
+  'mx_cdmx_cdmx_103300',
+  'mx_bc_tijuana_950',
+  'mx_sin_culiacan_88700',
+  'mx_mich_morelia_105100',
+  'mx_pue_puebla_1120',
+  'mx_ver_veracruz_89100',
+  'mx_gto_leon_93100',     // Comparativas León (grupo)
+  'mx_gto_leon_93900',
+  'mx_gto_leon_105100',
+];
+
+// Primer elemento de cada grupo → inserta encabezado antes
+const GROUP_START = {
+  'mx_gto_leon_101100': 'Radio Fórmula',
+  'mx_gto_leon_93100':  'Comparativas León',
+};
+
+const SEVERITY_LABEL = {
+  low:        'Bajo · 3–5 s',
+  medium_low: 'Medio-bajo · 6–15 s',
+  medium:     'Medio · 16–30 s',
+  high:       'Alto · 31–120 s',
+  critical:   'Crítico · 2–5 min',
+  severe:     'Severo · 5–30 min',
+  outage:     'Corte · > 30 min',
+};
+
+const STATUS_LABEL = {
+  ok:      'Operativo',
+  silence: 'Silencio (dead air)',
+  offline: 'Caída de stream',
+  nodata:  'Sin datos',
+};
+
+// ── Estado global ─────────────────────────────────────────────────────────────
+
+const state = { hours: 24, status: null, incidents: null };
+let cdTimer = null;
+let cdValue = 60;
+
+// ── Formateo ──────────────────────────────────────────────────────────────────
+
+const shortTimeFmt = new Intl.DateTimeFormat('es-MX', {
+  timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+});
+const fullTimeFmt = new Intl.DateTimeFormat('es-MX', {
+  timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+});
+const dayFmt = new Intl.DateTimeFormat('es-MX', {
+  timeZone: TZ, month: 'short', day: 'numeric',
+});
+
+function fmtDuration(s) {
+  if (s < 60)   return `${s} s`;
+  if (s < 3600) return `${Math.floor(s / 60)} min ${s % 60} s`;
+  return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
+}
+
+// Formatea string naive "2026-05-09T14:30:22" (ya en CDMX) sin conversión de zona
+function fmtNaive(iso) {
+  const [datePart, timePart] = iso.split('T');
+  const [, m, d] = datePart.split('-');
+  const months = ['', 'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+                  'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  return `${parseInt(d)} ${months[parseInt(m)]} · ${timePart.substring(0, 5)}`;
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+
+async function loadData() {
+  try {
+    const [sRes, iRes] = await Promise.all([
+      fetch(`/api/status?hours=${state.hours}`),
+      fetch(`/api/incidents?hours=${state.hours}`),
+    ]);
+    if (!sRes.ok || !iRes.ok) throw new Error(`HTTP ${sRes.status}`);
+    state.status    = await sRes.json();
+    state.incidents = await iRes.json();
+    renderAll();
+    updateFooterTime(state.status.generated_at);
+  } catch (e) {
+    document.getElementById('stations-container').innerHTML =
+      `<div class="loading" style="color:#dc2626">Error al cargar: ${e.message}</div>`;
+  }
+}
+
+// ── Render principal ──────────────────────────────────────────────────────────
+
+function renderAll() {
+  renderBanner();
+  renderStations();
+  renderIncidents();
+}
+
+// ── Banner ────────────────────────────────────────────────────────────────────
+
+function renderBanner() {
+  const list   = state.incidents?.incidents ?? [];
+  const banner = document.getElementById('banner');
+  const text   = document.getElementById('banner-text');
+
+  const severe    = list.filter(i => ['outage', 'severe'].includes(i.alert_level)).length;
+  const notable   = list.filter(i => ['critical', 'high'].includes(i.alert_level)).length;
+  const total     = list.length;
+
+  banner.className = 'banner';
+  if (severe) {
+    banner.classList.add('banner-error');
+    text.textContent = `${severe} interrupción${severe > 1 ? 'es severas' : ' severa'} en las últimas ${state.hours} h`;
+  } else if (notable) {
+    banner.classList.add('banner-warning');
+    text.textContent = `${total} incidente${total > 1 ? 's' : ''} en las últimas ${state.hours} h`;
+  } else if (total) {
+    banner.classList.add('banner-warning');
+    text.textContent = `${total} incidente${total > 1 ? 's menores' : ' menor'} en las últimas ${state.hours} h`;
+  } else {
+    banner.classList.add('banner-ok');
+    text.textContent = `Todos los sistemas operativos · últimas ${state.hours} h`;
+  }
+}
+
+// ── Emisoras ──────────────────────────────────────────────────────────────────
+
+function renderStations() {
+  if (!state.status) return;
+
+  const stMap = {};
+  for (const st of state.status.stations) stMap[st.station_id] = st;
+
+  const bucketMs    = state.status.bucket_minutes * 60 * 1000;
+  const nowMs       = Date.now();
+  const fromMs      = nowMs - state.hours * 3600 * 1000;
+  const alignedFrom = Math.floor(fromMs / bucketMs) * bucketMs;
+  const alignedNow  = Math.floor(nowMs  / bucketMs) * bucketMs;
+
+  let html = '';
+  let lastGroup = null;
+
+  for (const sid of STATION_ORDER) {
+    if (GROUP_START[sid] && GROUP_START[sid] !== lastGroup) {
+      lastGroup = GROUP_START[sid];
+      html += `<div class="group-header">${lastGroup}</div>`;
+    }
+    const st = stMap[sid];
+    if (!st) continue;
+    html += buildStationRow(st, bucketMs, alignedFrom, alignedNow);
+  }
+
+  document.getElementById('stations-container').innerHTML = html;
+  attachBarListeners();
+}
+
+function buildStationRow(st, bucketMs, alignedFrom, alignedNow) {
+  // Mapa de cubetas (alineadas al tamaño de cubeta)
+  const bmap = {};
+  for (const b of st.buckets) {
+    const key = Math.floor(new Date(b.time).getTime() / bucketMs) * bucketMs;
+    bmap[key] = b;
+  }
+
+  // Estado actual: última cubeta ≤ 12 min
+  const sorted   = [...st.buckets].sort((a, b) => a.time < b.time ? -1 : 1);
+  const lastB    = sorted[sorted.length - 1];
+  const ageMs    = lastB ? Date.now() - new Date(lastB.time).getTime() : Infinity;
+  const curSt    = (!lastB || ageMs > 12 * 60 * 1000) ? 'nodata' : lastB.status;
+
+  // Barras
+  let barsHtml = '';
+  for (let t = alignedFrom; t <= alignedNow; t += bucketMs) {
+    const b  = bmap[t];
+    const st = b ? b.status : 'nodata';
+    const attrs = b
+      ? `data-t="${t}" data-bms="${bucketMs}" data-total="${b.total}" data-online="${b.online}" data-audio="${b.audio_ok}" data-status="${st}"`
+      : `data-t="${t}" data-bms="${bucketMs}" data-total="0" data-online="0" data-audio="0" data-status="nodata"`;
+    barsHtml += `<div class="bar bar-${st}" ${attrs}></div>`;
+  }
+
+  // Labels del eje temporal
+  const fromStr = shortTimeFmt.format(new Date(alignedFrom));
+  const nowStr  = shortTimeFmt.format(new Date(alignedNow));
+
+  // Uptime %
+  let uCls = 'pct-none', uStr = '—';
+  if (st.uptime_pct !== null) {
+    uStr = `${st.uptime_pct}%`;
+    uCls = st.uptime_pct < 95 ? 'pct-bad' : st.uptime_pct < 99.5 ? 'pct-warn' : 'pct-ok';
+  }
+
+  return `
+<div class="station-row">
+  <div class="station-top">
+    <div class="station-dot dot-${curSt}"></div>
+    <span class="station-name">${st.name}</span>
+    <span class="station-location">${st.city}, ${st.state}</span>
+    <span class="station-uptime ${uCls}">${uStr}</span>
+  </div>
+  <div class="bars" data-sid="${st.station_id}">${barsHtml}</div>
+  <div class="bars-axis">
+    <span>${state.hours} h atrás · ${fromStr} CDMX</span>
+    <span>Ahora · ${nowStr} CDMX</span>
+  </div>
+</div>`;
+}
+
+function attachBarListeners() {
+  const tooltip = document.getElementById('tooltip');
+  document.querySelectorAll('.bar').forEach(bar => {
+    bar.addEventListener('mousemove', e => {
+      const t      = parseInt(bar.dataset.t);
+      const bMs    = parseInt(bar.dataset.bms);
+      const total  = parseInt(bar.dataset.total);
+      const online = parseInt(bar.dataset.online);
+      const audio  = parseInt(bar.dataset.audio);
+      const status = bar.dataset.status;
+
+      document.getElementById('tt-time').textContent =
+        `${dayFmt.format(new Date(t))} · ${shortTimeFmt.format(new Date(t))}–${shortTimeFmt.format(new Date(t + bMs))} CDMX`;
+      document.getElementById('tt-status').textContent = STATUS_LABEL[status] ?? status;
+      document.getElementById('tt-stats').textContent = total
+        ? `${Math.round(online / total * 100)}% en línea · ${Math.round(audio / total * 100)}% audio OK · ${total} muestras`
+        : 'Sin datos en este período';
+
+      tooltip.style.display = 'block';
+      tooltip.style.left    = (e.clientX + 16) + 'px';
+      tooltip.style.top     = (e.clientY - 12) + 'px';
+    });
+    bar.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+  window.addEventListener('scroll', () => { tooltip.style.display = 'none'; }, { passive: true });
+}
+
+// ── Incidentes ────────────────────────────────────────────────────────────────
+
+function renderIncidents() {
+  const container = document.getElementById('incidents-container');
+  const list = state.incidents?.incidents ?? [];
+
+  if (!list.length) {
+    container.innerHTML =
+      `<div class="no-incidents">Sin incidentes en las últimas ${state.hours} horas.</div>`;
+    return;
+  }
+
+  let rows = '';
+  for (const inc of list) {
+    const typeHtml = inc.type === 'offline'
+      ? '<span class="type-offline">Caída</span>'
+      : '<span class="type-silence">Silencio</span>';
+    rows += `
+<tr>
+  <td class="col-time">${fmtNaive(inc.started_at_cdmx)}</td>
+  <td>${inc.station_name}</td>
+  <td>${inc.city}</td>
+  <td class="col-type">${typeHtml}</td>
+  <td class="col-dur">${fmtDuration(inc.duration_seconds)}</td>
+  <td class="col-badge"><span class="badge badge-${inc.alert_level}">${SEVERITY_LABEL[inc.alert_level] ?? inc.alert_level}</span></td>
+</tr>`;
+  }
+
+  container.innerHTML = `
+<table class="incidents-table">
+  <thead><tr>
+    <th class="col-time">Inicio CDMX</th>
+    <th>Emisora</th>
+    <th>Ciudad</th>
+    <th class="col-type">Tipo</th>
+    <th class="col-dur">Duración</th>
+    <th class="col-badge">Severidad</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>`;
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+function updateFooterTime(isoUtc) {
+  document.getElementById('last-updated').textContent = fullTimeFmt.format(new Date(isoUtc));
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+document.getElementById('tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.tab');
+  if (!btn) return;
+  const hours = parseInt(btn.dataset.hours);
+  if (hours === state.hours) return;
+  state.hours = hours;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('stations-container').innerHTML =
+    '<div class="loading">Cargando datos…</div>';
+  document.getElementById('incidents-container').innerHTML =
+    '<div class="loading">Cargando incidentes…</div>';
+  loadData();
+  resetCountdown();
+});
+
+// ── Auto-refresh ──────────────────────────────────────────────────────────────
+
+function resetCountdown() {
+  clearInterval(cdTimer);
+  cdValue = 60;
+  document.getElementById('countdown').textContent = cdValue;
+  cdTimer = setInterval(() => {
+    cdValue--;
+    document.getElementById('countdown').textContent = cdValue;
+    if (cdValue <= 0) { loadData(); cdValue = 60; }
+  }, 1000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+loadData();
+resetCountdown();
+</script>
+</body>
+</html>
