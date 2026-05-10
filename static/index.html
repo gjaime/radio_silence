@@ -293,6 +293,42 @@
 
     /* ── Loading ─────────────────────────────────────────────────── */
     .loading { color: var(--muted); padding: 32px 0; text-align: center; font-size: 13px; }
+
+    /* ── Incidents scroll wrapper ────────────────────────────────── */
+    .incidents-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* ── Mobile ──────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .container { padding: 16px 14px 40px; }
+
+      /* Header: tabs ocupan todo el ancho */
+      header { gap: 10px; }
+      .tabs { width: 100%; }
+      .tab  { flex: 1; text-align: center; padding: 7px 6px; font-size: 12px; }
+
+      /* Banner */
+      .banner { font-size: 13px; padding: 12px 14px; margin-bottom: 20px; }
+
+      /* Station row: nombre + uptime en línea 1, ubicación en línea 2 */
+      .station-top { flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+      .station-name     { order: 1; flex: 1; }
+      .station-uptime   { order: 2; margin-left: auto; flex-direction: row; gap: 10px; }
+      .pct-row          { flex-direction: column; align-items: flex-end; gap: 0; }
+      .pct-val          { font-size: 12px; }
+      .pct-label        { font-size: 10px; }
+      .station-location { order: 3; width: 100%; padding-left: 16px; font-size: 11px; margin-top: -2px; }
+
+      /* Barras ligeramente más bajas */
+      .bars      { height: 26px; }
+      .bars-axis { font-size: 10px; }
+
+      /* Tabla incidentes: ocultar Ciudad */
+      .col-city { display: none; }
+
+      /* Footer: apilado */
+      footer { flex-direction: column; align-items: flex-start; gap: 3px; }
+      footer .sep { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -626,7 +662,7 @@ function renderIncidents() {
 <tr>
   <td class="col-time">${fmtNaive(inc.started_at_cdmx)}</td>
   <td>${inc.station_name}</td>
-  <td>${inc.city}</td>
+  <td class="col-city">${inc.city}</td>
   <td class="col-type">${typeHtml}</td>
   <td class="col-dur">${fmtDuration(inc.duration_seconds)}</td>
   <td class="col-badge"><span class="badge badge-${inc.alert_level}">${SEVERITY_LABEL[inc.alert_level] ?? inc.alert_level}</span></td>
@@ -634,17 +670,19 @@ function renderIncidents() {
   }
 
   container.innerHTML = `
+<div class="incidents-scroll">
 <table class="incidents-table">
   <thead><tr>
     <th class="col-time">Inicio CDMX</th>
     <th>Emisora</th>
-    <th>Ciudad</th>
+    <th class="col-city">Ciudad</th>
     <th class="col-type">Tipo</th>
     <th class="col-dur">Duración</th>
     <th class="col-badge">Severidad</th>
   </tr></thead>
   <tbody>${rows}</tbody>
-</table>`;
+</table>
+</div>`;
 }
 
 // ── Footer ────────────────────────────────────────────────────────────────────
