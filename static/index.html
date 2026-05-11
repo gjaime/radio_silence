@@ -200,6 +200,7 @@
     /* ── Bars ────────────────────────────────────────────────────── */
     .bars {
       display: flex;
+      justify-content: flex-end;
       gap: 1px;
       height: 32px;
       border-radius: 3px;
@@ -562,7 +563,7 @@
       <h1>silence</h1>
       <div class="sub">
         radio auditor &nbsp;·&nbsp;
-        <a href="https://silence.kraken-lab.work">silence.kraken-lab.work</a>
+        by <a href="https://kraken-lab.work">kraken-lab.work</a>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
@@ -580,12 +581,6 @@
     <button class="group-tab active" data-group="custom">Personalizado</button>
     <button class="group-tab"        data-group="network">Por cadena</button>
     <button class="group-tab"        data-group="state">Por estado</button>
-  </div>
-
-  <!-- Banner de estado global -->
-  <div class="banner banner-ok" id="banner">
-    <div class="banner-dot"></div>
-    <span id="banner-text">Cargando…</span>
   </div>
 
   <!-- Filas de emisoras (generadas por JS) -->
@@ -783,36 +778,8 @@ async function loadData() {
 // ── Render principal ──────────────────────────────────────────────────────────
 
 function renderAll() {
-  renderBanner();
   renderStations();
   renderIncidents();
-}
-
-// ── Banner ────────────────────────────────────────────────────────────────────
-
-function renderBanner() {
-  const list   = state.incidents?.incidents ?? [];
-  const banner = document.getElementById('banner');
-  const text   = document.getElementById('banner-text');
-
-  const severe    = list.filter(i => ['outage', 'severe'].includes(i.alert_level)).length;
-  const notable   = list.filter(i => ['critical', 'high'].includes(i.alert_level)).length;
-  const total     = list.length;
-
-  banner.className = 'banner';
-  if (severe) {
-    banner.classList.add('banner-error');
-    text.textContent = `${severe} interrupción${severe > 1 ? 'es severas' : ' severa'} en los ${windowLabel(state.hours)}`;
-  } else if (notable) {
-    banner.classList.add('banner-warning');
-    text.textContent = `${total} incidente${total > 1 ? 's' : ''} en los ${windowLabel(state.hours)}`;
-  } else if (total) {
-    banner.classList.add('banner-warning');
-    text.textContent = `${total} incidente${total > 1 ? 's menores' : ' menor'} en los ${windowLabel(state.hours)}`;
-  } else {
-    banner.classList.add('banner-ok');
-    text.textContent = `Todos los sistemas operativos · ${windowLabel(state.hours)}`;
-  }
 }
 
 // ── Emisoras ──────────────────────────────────────────────────────────────────
