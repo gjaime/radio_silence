@@ -1,0 +1,10 @@
+[Unit]
+Description=Run refresh-views every 2.5 minutes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=2m30s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

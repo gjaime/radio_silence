@@ -542,9 +542,10 @@
     </div>
 
     <p class="note">
-      Los datos tienen hasta 1 minuto de retraso (las vistas se actualizan cada minuto).
-      El monitor verifica cada emisora cada segundo desde un único punto de red —
-      una caída masiva y simultánea puede indicar un problema del ISP del monitor, no de las emisoras.
+      Al no ser este un monitor de radio oficial, los tiempos de refresco de los datos son de 150 segundos
+      por capacidad de cómputo en el servidor local. El monitor verifica cada emisora cada segundo
+      desde un único punto de red — una caída masiva y simultánea puede indicar un problema del ISP
+      del monitor, no de las emisoras.
     </p>
   </div>
 </div>
@@ -599,7 +600,7 @@
     <span class="sep">·</span>
     <span>Los datos pueden tener hasta 1 minuto de retraso.</span>
     <span class="sep">·</span>
-    <span>Actualizando en <span id="countdown">60</span>s</span>
+    <span>Actualizando en <span id="countdown">150</span>s</span>
     <span class="sep">·</span>
     <a href="https://github.com/gjaime/radio_silence" target="_blank" rel="noopener">GitHub</a>
   </footer>
@@ -1030,7 +1031,7 @@ function resetCountdown() {
   cdTimer = setInterval(() => {
     cdValue--;
     document.getElementById('countdown').textContent = cdValue;
-    if (cdValue <= 0) { loadData(); cdValue = 60; }
+    if (cdValue <= 0) { loadData(); cdValue = 150; }
   }, 1000);
 }
 

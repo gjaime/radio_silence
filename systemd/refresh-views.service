@@ -1,0 +1,14 @@
+[Unit]
+Description=Refresh radio_auditor materialized views
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/radio_auditor/venv/bin/python /opt/radio_auditor/scripts/refresh_views.py
+StandardOutput=append:/var/log/refresh_views.log
+StandardError=append:/var/log/refresh_views.log
+TimeoutStartSec=3min
+
+[Install]
+WantedBy=multi-user.target
